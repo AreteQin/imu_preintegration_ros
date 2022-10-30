@@ -14,7 +14,7 @@ void imuCallback(const sensor_msgs::Imu::ConstPtr &msg) {
 int main(int argc, char **argv) {
     ros::init(argc, argv, "listener");
     ros::NodeHandle node;
-    ros::Subscriber subimu = node.subscribe("qcar_imu/raw_data/", 10, imuCallback);
+    ros::Subscriber subimu = node.subscribe("qcar_imu", 10, imuCallback);
     ros::spin();
 
     clock_t start_time, end_time;

@@ -2,7 +2,7 @@
 <package format="2">
   <name>imu_preintegration_ros</name>
   <version>0.0.0</version>
-  <description>The IMU_preintegration_ros package</description>
+  <description>The imu_preintegration_ros package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
