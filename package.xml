@@ -58,6 +58,12 @@
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
+  <build_depend>tf2</build_depend>
+  <build_depend>tf2_ros</build_depend>
+  <build_export_depend>tf2</build_export_depend>
+  <build_export_depend>tf2_ros</build_export_depend>
+  <exec_depend>tf2</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

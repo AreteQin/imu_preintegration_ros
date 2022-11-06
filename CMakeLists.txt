@@ -11,11 +11,15 @@ find_package(catkin REQUIRED COMPONENTS
         roscpp
         rospy
         sensor_msgs
+        tf2_ros
+        tf2
         )
 
 ## System dependencies are found with CMake's conventions
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_modules) # Add elements to list
 find_package(Eigen3 REQUIRED)
 find_package(Sophus REQUIRED)
+find_package(Glog REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -119,6 +123,7 @@ include_directories(
         # include
         ${catkin_INCLUDE_DIRS}
         ${EIGEN3_INCLUDE_DIR}
+        ${GLOG_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -152,6 +157,7 @@ target_link_libraries(IMU_preintegration_node
         ${catkin_LIBRARIES}
         IMU_lib
         Sophus::Sophus
+        ${GLOG_LIBRARIES}
         )
 
 #############

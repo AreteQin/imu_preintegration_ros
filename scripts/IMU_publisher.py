@@ -6,7 +6,7 @@ from Quanser.product_QCar import QCar
 
 if __name__ == "__main__":
     rospy.init_node("IMU_publisher")
-    pub = rospy.Publisher("/qcar_imu", Imu, queue_size=10)
+    pub = rospy.Publisher("qcar_imu/raw", Imu, queue_size=10)
     my_car = QCar()
     while not rospy.is_shutdown():
         imu = my_car.read_IMU()
