@@ -290,6 +290,7 @@ namespace IMU {
             avgV = dP / dT;
             return false;
         }
+        LOG(INFO)<<"Initialise Direction G";
         // dirG = -(-sV1 + sVn - n*Rwg*g*t) = sV1 - sVn + n*Rwg*g*t
         // 归一化，约等于重力在世界坐标系下的方向
         dirG = dirG + avgV;

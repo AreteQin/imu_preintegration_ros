@@ -15,9 +15,9 @@ const float dt = 0.01; //TODO: get from IMU
 bool
 PreintegrateImuFromFirstKF(IMU::Preintegrated *current_preintegration, Eigen::Vector3f a, Eigen::Vector3f w, float dt) {
     current_preintegration->IntegrateNewMeasurement(a, w, dt);
-    if (current_preintegration->GetIMUNum() == min_imu_init) {
+//    if (current_preintegration->GetIMUNum() == min_imu_init) {
         current_preintegration->InitialiseDirectionG();
-    }
+//    }
     return true;
 }
 
