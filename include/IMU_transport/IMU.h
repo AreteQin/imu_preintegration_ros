@@ -22,6 +22,9 @@
 #include <iostream>
 #include <mutex>
 #include <sophus/se3.hpp>
+#include <glog/logging.h>
+
+const int min_imu_init = 100;
 
 namespace IMU {
 
@@ -137,6 +140,9 @@ namespace IMU {
         void
         IntegrateNewMeasurement(const Eigen::Vector3f &acceleration, const Eigen::Vector3f &angVel, const float &dt);
 
+        // Initialise the preintgration of IMU measurements
+        bool InitialiseDirectionG();
+
         /**
         * @brief 融合两个预积分，发生在删除关键帧的时候，3帧变2帧，需要把两段预积分融合后重新计算预计分
         * @param pPrev 前面的预积分
@@ -152,7 +158,7 @@ namespace IMU {
         // Calculate the new delta rotation dR while updating the bias
         Eigen::Matrix3f GetDeltaRotation(const Bias &b_);
 
-        // Calculate the new delta velocity dV while updating the bias
+        // Calculate the new delta avgV dV while updating the bias
         Eigen::Vector3f GetDeltaVelocity(const Bias &b_);
 
         // Calculate the new delta position dP while updating the bias
@@ -180,6 +186,7 @@ namespace IMU {
         Eigen::Vector3f GetOriginalDeltaVelocity();
 
         Eigen::Vector3f GetOriginalDeltaPosition();
+
 //
 //        Bias GetOriginalBias() {
 //            std::unique_lock<std::mutex> lock(mMutex);
@@ -204,6 +211,8 @@ namespace IMU {
 //            std::cout << "end pint meas:\n";
 //        }
 
+        int GetIMUNum();
+
     public:
         // the time between the first and last measurement in one preintegration
         float dT;
@@ -223,7 +232,12 @@ namespace IMU {
         // Jacobians wrt bias
         Eigen::Matrix3f JRg, JVg, JVa, JPg, JPa;
         Eigen::Vector3f avgA, avgW;
-
+        // Average velocity
+        Eigen::Vector3f avgV;
+        // 重力系到世界系的旋转矩阵
+        Eigen::Matrix3f Rwg;
+        // 重力方向
+        Eigen::Vector3f dirG;
 
     private:
         // Updated bias

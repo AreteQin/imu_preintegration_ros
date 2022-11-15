@@ -2,6 +2,8 @@
 // Created by qin on 10/29/22.
 //
 
+#include <cmath>
+
 #include "../include/IMU_transport/IMU.h"
 
 // 极小量的定义
@@ -195,6 +197,7 @@ namespace IMU {
         avgW.setZero();
         dT = 0.0f;
         mvMeasurements.clear();
+        dirG.setZero();
     }
 
     // 当偏置更新时，对预计分进行更新，以便迭代优化
@@ -209,7 +212,7 @@ namespace IMU {
                                            const float &dt) {
         mvMeasurements.push_back(integrable(acceleration, angVel, dt));
 
-        // Position is updated firstly, as it depends on previously computed velocity and rotation.
+        // Position is updated firstly, as it depends on previously computed avgV and rotation.
         // Velocity is updated secondly, as it depends on previously computed rotation.
         // Rotation is the last to be updated.
 
@@ -220,39 +223,39 @@ namespace IMU {
         B.setZero();
 
         // 减去偏置后的加速度和角速度
-        Eigen::Vector3f acc, accW;
+        Eigen::Vector3f acc, omega;
         acc << acceleration(0) - b.bax, acceleration(1) - b.bay, acceleration(2) - b.baz;
-        accW << angVel(0) - b.bwx, angVel(1) - b.bwy, angVel(2) - b.bwz;
+//        omega << angVel(0) - b.bwx, angVel(1) - b.bwy, angVel(2) - b.bwz;
 
         // 计算增加新的IMU测量值后的平均加速度和角速度
 //            avgA = (dT * avgA + dR * acc * dt) / (dT + dt);
-//            avgW = (dT * avgW + accW * dt) / (dT + dt);
+//            avgW = (dT * avgW + omega * dt) / (dT + dt);
 
-        // Update delta position dP and velocity dV (rely on no-updated delta rotation)
+        // Update delta position dP and avgV dV (rely on no-updated delta rotation)
         // equation (5.3)
         dP = dP + dV * dt + 0.5f * dR * acc * dt * dt;
         // equation (5.2)
         dV = dV + dR * acc * dt;
 
-        // Compute velocity and position parts of matrices A and B (rely on non-updated delta rotation)
+        // Compute avgV and position parts of matrices A and B (rely on non-updated delta rotation)
         // equation (4.9)
-        Eigen::Matrix<float, 3, 3> Wacc = Sophus::SO3f::hat(acc);
+        Eigen::Matrix<float, 3, 3> acc_hat = Sophus::SO3f::hat(acc);
 
-        A.block<3, 3>(3, 0) = -dR * dt * Wacc;
-        A.block<3, 3>(6, 0) = -0.5f * dR * dt * dt * Wacc;
+        A.block<3, 3>(3, 0) = -dR * dt * acc_hat;
+        A.block<3, 3>(6, 0) = -0.5f * dR * dt * dt * acc_hat;
         A.block<3, 3>(6, 3) = Eigen::DiagonalMatrix<float, 3>(dt, dt, dt);
         B.block<3, 3>(3, 3) = dR * dt;
         B.block<3, 3>(6, 3) = 0.5f * dR * dt * dt;
 
-        // Update position and velocity jacobians wrt bias correction p 和 v 对偏置的雅克比
+        // Update position and avgV jacobians wrt bias correction p 和 v 对偏置的雅克比
         // equation (5.13.1), but it is never used
 //            JPa = JPa + JVa * dt - 0.5f * dR * dt * dt;
         // equation (5.13)
-        JPg = JPg + JVg * dt - 0.5f * dR * dt * dt * Wacc * JRg;
+        JPg = JPg + JVg * dt - 0.5f * dR * dt * dt * acc_hat * JRg;
         // equation (5.11)
         JVa = JVa - dR * dt;
         // equation (5.10)
-        JVg = JVg - dR * dt * Wacc * JRg;
+        JVg = JVg - dR * dt * acc_hat * JRg;
 
         // Update delta rotation
         // Calculate R_{j-1,j}
@@ -276,6 +279,36 @@ namespace IMU {
 
         // Total integrated time
         dT += dt;
+    }
+
+    bool Preintegrated::InitialiseDirectionG() {
+        if (mvMeasurements.size() < min_imu_init) {
+            // 初始化时关于速度的预积分累减的定义
+            dirG = dirG - (dR * dV);
+            // dR * dV = Ri*[Ri^T*(s*Vj - s*Vi - Rwg*g*tij)] = s*Vj - s*Vi - Rwg*g*tij
+            // 求取实际的速度，位移/时间
+            avgV = dP / dT;
+            return false;
+        }
+        // dirG = -(-sV1 + sVn - n*Rwg*g*t) = sV1 - sVn + n*Rwg*g*t
+        // 归一化，约等于重力在世界坐标系下的方向
+        dirG = dirG + avgV;
+        dirG = dirG / dirG.norm();
+        // 原本的重力方向
+        Eigen::Vector3f gI(0.0f, 0.0f, -1.0f);
+        // 求重力在世界坐标系下的方向与重力在重力坐标系下的方向的叉乘
+        Eigen::Vector3f v = gI.cross(dirG);
+        // 求叉乘模长
+        const float nv = v.norm();
+        // 求转角大小
+        const float cosg = gI.dot(dirG);
+        const float ang = std::acos(cosg);
+        // v/nv 表示垂直于两个向量的轴  ang 表示转的角度，组成角轴
+        Eigen::Vector3f vzg = v * ang / nv;
+        // 获得重力坐标系到世界坐标系的旋转矩阵的初值
+        Rwg = Sophus::SO3f::exp(vzg).matrix();
+        LOG(INFO) << "Rwg: " << std::endl << Rwg << std::endl;
+        return true;
     }
 
     /**
@@ -336,7 +369,7 @@ namespace IMU {
         return NormalizeRotation(dR * Sophus::SO3f::exp(JRg * dbg).matrix());
     }
 
-    // Calculate the new delta velocity dV while updating the bias
+    // Calculate the new delta avgV dV while updating the bias
     Eigen::Vector3f Preintegrated::GetDeltaVelocity(const Bias &b_) {
         std::unique_lock<std::mutex> lock(mMutex);
         Eigen::Vector3f dbg, dba;
@@ -387,6 +420,7 @@ namespace IMU {
         std::unique_lock<std::mutex> lock(mMutex);
         return dP;
     }
+
 //
 //        Bias GetOriginalBias() {
 //            std::unique_lock<std::mutex> lock(mMutex);
@@ -410,4 +444,7 @@ namespace IMU {
 //            }
 //            std::cout << "end pint meas:\n";
 //        }
+    int Preintegrated::GetIMUNum() {
+        return mvMeasurements.size();
+    }
 }
