@@ -3,6 +3,6 @@
   <node name="IMU_preintegration_node" pkg="imu_preintegration_ros"
           type="IMU_preintegration_node"/>
 
-  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find imu_preintegration_ros)/imu_visualisation.rviz" />
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find imu_preintegration_ros)/rviz/imu_visualisation.rviz" />
 
 </launch>
