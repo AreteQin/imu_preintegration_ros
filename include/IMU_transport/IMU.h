@@ -104,7 +104,7 @@ namespace IMU {
         IntegratedRotation(const Eigen::Vector3f &angVel, const Bias &imuBias, const float &time);
 
     public:
-        float deltaT; //integration time
+        float deltaT{}; //integration time
         Eigen::Matrix3f deltaR;
         Eigen::Matrix3f rightJ; // right jacobian
     };
@@ -127,7 +127,7 @@ namespace IMU {
 
         Preintegrated() {}
 
-        ~Preintegrated() {}
+        ~Preintegrated() = default;
 
         void CopyFrom(Preintegrated *pImuPre);
 
@@ -215,7 +215,7 @@ namespace IMU {
 
     public:
         // the time between the first and last measurement in one preintegration
-        float dT;
+        float dT{};
         // 协方差矩阵
         Eigen::Matrix<float, 15, 15> C;
         // 信息矩阵

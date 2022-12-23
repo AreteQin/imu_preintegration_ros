@@ -13,12 +13,12 @@ if __name__ == "__main__":
         imu = my_car.read_IMU()
         imu_msg = Imu()
         imu_msg.header.stamp = rospy.Time.now()
-        imu_msg.linear_acceleration.x = imu[0][0]
-        imu_msg.linear_acceleration.y = imu[0][1]
-        imu_msg.linear_acceleration.z = imu[0][2]
-        imu_msg.angular_velocity.x = imu[1][0]
-        imu_msg.angular_velocity.y = imu[1][1]
-        imu_msg.angular_velocity.z = imu[1][2]
+        imu_msg.linear_acceleration.x = imu[1]
+        imu_msg.linear_acceleration.y = imu[2]
+        imu_msg.linear_acceleration.z = imu[3]
+        imu_msg.angular_velocity.x = imu[4]
+        imu_msg.angular_velocity.y = imu[5]
+        imu_msg.angular_velocity.z = imu[6]
         imu_msg.header.frame_id = "qcar_body"
         imu_msg.orientation_covariance[0] = -1 # set to -1 to indicate that orientation is not available
         pub.publish(imu_msg)
