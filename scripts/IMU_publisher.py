@@ -1,55 +1,25 @@
+#! /usr/bin/env python3
+
+import rospy
+from sensor_msgs.msg import Imu
 from Quanser.product_QCar import QCar
-import time
-import struct
-import numpy as np 
 
-# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-## Timing Parameters and methods 
-startTime = time.time()
-def elapsed_time():
-    return time.time() - startTime
-
-sampleRate = 1000
-sampleTime = 1/sampleRate
-simulationTime = 5.0
-print('Sample Time: ', sampleTime)
-
-IMU_Data  = np.zeros(6, dtype=np.float64)
-
-# Additional parameters
-counter = 0
-
-# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-## QCar Initialization
-myCar = QCar()
-
-# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
-## Main Loop
-try:
-    while elapsed_time() < simulationTime:
-        # Start timing this iteration
-        start = time.time()
-   
-
-        myCar.read_IMU()
-        gyro_data = myCar.read_other_buffer_IMU[0:3]
-        accel_data = myCar.read_other_buffer_IMU[3:6]
-        print("Gyro data in x:{}, y:{}, z:{}".format(gyro_data[0],gyro_data[1],gyro_data[2]))
-        print("Accel data in x:{}, y:{}, z:{}".format(accel_data[0],accel_data[1],accel_data[2]))
-        # End timing this iteration
-        end = time.time()
-
-        # Calculate computation time, and the time that the thread should pause/sleep for
-        computation_time = end - start
-        sleep_time = sampleTime - computation_time%sampleTime
-
-        # Pause/sleep and print out the current timestamp
-        time.sleep(sleep_time)
-        counter += 1
-
-except KeyboardInterrupt:
-    print("User interrupted!")
-
-finally:    
-    myCar.terminate()
-# -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+if __name__ == "__main__":
+    rospy.init_node("IMU_publisher")
+    pub = rospy.Publisher("qcar_imu/raw", Imu, queue_size=10)
+    #pub = rospy.Publisher("/imu/data_raw", Imu, queue_size=10)
+    my_car = QCar()
+    while not rospy.is_shutdown():
+        my_car.read_IMU()
+        imu_msg = Imu()
+        imu_msg.header.stamp = rospy.Time.now()
+        imu_msg.linear_acceleration.x = myCar.read_other_buffer_IMU[3]
+        imu_msg.linear_acceleration.y = myCar.read_other_buffer_IMU[4]
+        imu_msg.linear_acceleration.z = myCar.read_other_buffer_IMU[5]
+        imu_msg.angular_velocity.x = myCar.read_other_buffer_IMU[0]
+        imu_msg.angular_velocity.y = myCar.read_other_buffer_IMU[1]
+        imu_msg.angular_velocity.z = myCar.read_other_buffer_IMU[2]
+        imu_msg.header.frame_id = "qcar_body"
+        imu_msg.orientation_covariance[0] = -1 # set to -1 to indicate that orientation is not available
+        pub.publish(imu_msg)
+    rospy.spin()
