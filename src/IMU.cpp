@@ -10,7 +10,7 @@
 const float eps = 1e-4;
 
 // Gravity value
-const float g = -9.81;
+//const float g = -9.81;
 
 namespace IMU {
 
@@ -197,7 +197,7 @@ namespace IMU {
         avgW.setZero();
         dT = 0.0f;
         mvMeasurements.clear();
-        dirG.setZero();
+        dirG = {0, 0, 1};
     }
 
     // 当偏置更新时，对预计分进行更新，以便迭代优化
@@ -225,17 +225,22 @@ namespace IMU {
         // 减去偏置后的加速度和角速度
         Eigen::Vector3f acc, omega;
         acc << acceleration(0) - b.bax, acceleration(1) - b.bay, acceleration(2) - b.baz;
-//        omega << angVel(0) - b.bwx, angVel(1) - b.bwy, angVel(2) - b.bwz;
+        // Is it used anywhere? Cause IntegratedRotation() calculates it again
+        omega << angVel(0) - b.bwx, angVel(1) - b.bwy, angVel(2) - b.bwz;
 
-        // 计算增加新的IMU测量值后的平均加速度和角速度
-//            avgA = (dT * avgA + dR * acc * dt) / (dT + dt);
-//            avgW = (dT * avgW + omega * dt) / (dT + dt);
+//        LOG(INFO) << "acc: " << acc.transpose() << " omega: " << omega.transpose() << " dt: " << dt;
+
+        // 计算增加新的IMU测量值后的平均加速度和角速度. TODO Is it used anywhere?
+        avgA = (dT * avgA + dR * acc * dt) / (dT + dt);
+        avgW = (dT * avgW + omega * dt) / (dT + dt);
 
         // Update delta position dP and avgV dV (rely on no-updated delta rotation)
         // equation (5.3)
-        dP = dP + dV * dt + 0.5f * dR * acc * dt * dt;
+        LOG(INFO) << "dP: " << dP.transpose() << " dV: " << dV.transpose();
+        dP = dP + dV * dt + 0.5f * dR * (acc + g * dirG) * dt * dt;
+        LOG(INFO) << "dP: " << dP.transpose();
         // equation (5.2)
-        dV = dV + dR * acc * dt;
+        dV = dV + dR * (acc + g * dirG) * dt;
 
         // Compute avgV and position parts of matrices A and B (rely on non-updated delta rotation)
         // equation (4.9)
@@ -284,17 +289,21 @@ namespace IMU {
     bool Preintegrated::InitialiseDirectionG() {
         if (mvMeasurements.size() < min_imu_init) {
             // 初始化时关于速度的预积分累减的定义
-            dirG = dirG - (dR * dV);
+            accumulated_gravity = accumulated_gravity - (dR * mvMeasurements.back().a);
             // dR * dV = Ri*[Ri^T*(s*Vj - s*Vi - Rwg*g*tij)] = s*Vj - s*Vi - Rwg*g*tij
             // 求取实际的速度，位移/时间
             avgV = dP / dT;
             return false;
         }
-        LOG(INFO)<<"Initialise Direction G";
+        LOG(INFO) << "Initialise Direction G";
         // dirG = -(-sV1 + sVn - n*Rwg*g*t) = sV1 - sVn + n*Rwg*g*t
         // 归一化，约等于重力在世界坐标系下的方向
-        dirG = dirG + avgV;
-        dirG = dirG / dirG.norm();
+        accumulated_gravity = accumulated_gravity + avgV; // TODO: why dirG = dirG + avgV?
+        LOG(INFO) << "avgV: " << avgV.transpose();
+        LOG(INFO) << "avgV.norm(): " << avgV.norm();
+        LOG(INFO) << "dirG.norm()/min_imu_init: " << accumulated_gravity.norm() / (min_imu_init - 1);
+        g = accumulated_gravity.norm() / (min_imu_init - 1);
+        dirG = accumulated_gravity / accumulated_gravity.norm();
         // 原本的重力方向
         Eigen::Vector3f gI(0.0f, 0.0f, -1.0f);
         // 求重力在世界坐标系下的方向与重力在重力坐标系下的方向的叉乘
@@ -308,7 +317,8 @@ namespace IMU {
         Eigen::Vector3f vzg = v * ang / nv;
         // 获得重力坐标系到世界坐标系的旋转矩阵的初值
         Rwg = Sophus::SO3f::exp(vzg).matrix();
-        LOG(INFO) << "Rwg: " << std::endl << Rwg << std::endl;
+//        LOG(INFO) << "Rwg: " << std::endl << Rwg << std::endl;
+        UpdateDeltaPDeltaR();
         return true;
     }
 
@@ -406,7 +416,7 @@ namespace IMU {
 //            std::unique_lock<std::mutex> lock(mMutex);
 //            return dP + JPg * db.head(3) + JPa * db.tail(3);
 //        }
-//
+
     Eigen::Matrix3f Preintegrated::GetOriginalDeltaRotation() {
         std::unique_lock<std::mutex> lock(mMutex);
         return dR;
@@ -422,7 +432,7 @@ namespace IMU {
         return dP;
     }
 
-//
+
 //        Bias GetOriginalBias() {
 //            std::unique_lock<std::mutex> lock(mMutex);
 //            return b;
@@ -447,5 +457,10 @@ namespace IMU {
 //        }
     int Preintegrated::GetIMUNum() {
         return mvMeasurements.size();
+    }
+
+    void Preintegrated::UpdateDeltaPDeltaR() {
+        // Update dP
+        dP = Rwg * dP;
     }
 }

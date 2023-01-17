@@ -213,6 +213,8 @@ namespace IMU {
 
         int GetIMUNum();
 
+        void UpdateDeltaPDeltaR();
+
     public:
         // the time between the first and last measurement in one preintegration
         float dT{};
@@ -237,7 +239,9 @@ namespace IMU {
         // 重力系到世界系的旋转矩阵
         Eigen::Matrix3f Rwg;
         // 重力方向
-        Eigen::Vector3f dirG;
+        Eigen::Vector3f dirG; // unit vector
+        float g = 9.81;
+        Eigen::Vector3f accumulated_gravity;
 
     private:
         // Updated bias
