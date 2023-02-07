@@ -213,8 +213,6 @@ namespace IMU {
 
         int GetIMUNum();
 
-        void UpdateDeltaPDeltaR();
-
     public:
         // the time between the first and last measurement in one preintegration
         float dT{};

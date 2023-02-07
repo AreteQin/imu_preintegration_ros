@@ -197,7 +197,7 @@ namespace IMU {
         avgW.setZero();
         dT = 0.0f;
         mvMeasurements.clear();
-        dirG = {0, 0, 1};
+        dirG = {0, 0, -1};
     }
 
     // 当偏置更新时，对预计分进行更新，以便迭代优化
@@ -236,8 +236,9 @@ namespace IMU {
 
         // Update delta position dP and avgV dV (rely on no-updated delta rotation)
         // equation (5.3)
-        LOG(INFO) << "dP: " << dP.transpose() << " dV: " << dV.transpose();
+        LOG(INFO) << "dP: " << dP.transpose() << " dV: " << dV.transpose() << " dR: " << dR;
         dP = dP + dV * dt + 0.5f * dR * (acc + g * dirG) * dt * dt;
+        LOG(INFO) << "acc + g * dirG: " << (acc + g * dirG).transpose();
         LOG(INFO) << "dP: " << dP.transpose();
         // equation (5.2)
         dV = dV + dR * (acc + g * dirG) * dt;
@@ -292,10 +293,12 @@ namespace IMU {
             accumulated_gravity = accumulated_gravity - (dR * mvMeasurements.back().a);
             // dR * dV = Ri*[Ri^T*(s*Vj - s*Vi - Rwg*g*tij)] = s*Vj - s*Vi - Rwg*g*tij
             // 求取实际的速度，位移/时间
-            avgV = dP / dT;
             return false;
         }
         LOG(INFO) << "Initialise Direction G";
+        avgV = dP / dT;
+        LOG(INFO) << "dP: " << dP.transpose();
+        LOG(INFO) << "dT: " << dT;
         // dirG = -(-sV1 + sVn - n*Rwg*g*t) = sV1 - sVn + n*Rwg*g*t
         // 归一化，约等于重力在世界坐标系下的方向
         accumulated_gravity = accumulated_gravity + avgV; // TODO: why dirG = dirG + avgV?
@@ -317,8 +320,14 @@ namespace IMU {
         Eigen::Vector3f vzg = v * ang / nv;
         // 获得重力坐标系到世界坐标系的旋转矩阵的初值
         Rwg = Sophus::SO3f::exp(vzg).matrix();
+//        Rwg = Sophus::SO3f::exp(gI).matrix();
 //        LOG(INFO) << "Rwg: " << std::endl << Rwg << std::endl;
-        UpdateDeltaPDeltaR();
+        // Update dP
+        dP = {0, 0, 0};
+        // Update dR
+        dR = Rwg * dR;
+        // Update dV
+        dV = {0, 0, 0};
         return true;
     }
 
@@ -459,8 +468,4 @@ namespace IMU {
         return mvMeasurements.size();
     }
 
-    void Preintegrated::UpdateDeltaPDeltaR() {
-        // Update dP
-        dP = Rwg * dP;
-    }
 }
