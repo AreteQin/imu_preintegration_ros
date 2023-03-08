@@ -59,53 +59,17 @@ int main(int argc, char **argv) {
 //    0.00421652
 //    -0.0104901
 
-//    Simulation:
-//    Accelerometers calibration:
-//    Misalignment Matrix
-//    000000001 -0.355182 0-0.33298
-//    000000000 000000001 -0.446432
-//    0000000-0 000000000 000000001
-//    Scale Matrix
-//    0.268163 00000000 00000000
-//    00000000 0.258275 00000000
-//    00000000 00000000 0.245785
-//    Bias Vector
-//    -29.8281
-//    -28.4252
-//    -26.2715
-//    Accelerometers calibration: inverse scale factors:
-//    3.72908
-//    3.87184
-//    4.06859
-//
-//    Gyroscopes calibration: residual 0.00448846
-//    Misalignment Matrix
-//    0000001 19.2489 180.092
-//    296.021 0000001 038.434
-//    331.159 0214.87 0000001
-//    Scale Matrix
-//    0.0263342 000000000 000000000
-//    000000000 0.0216272 000000000
-//    000000000 000000000 0.0341828
-//    Bias Vector
-//    0.00603591
-//    0.00596286
-//    0.00601029
-//    Gyroscopes calibration: inverse scale factors:
-//    37.9734
-//    46.2381
-//    29.2544
-
     // IMU bias and calibration
-//    IMU::Bias b(-134.829, 030.3091, 034.0347,
-//                -0.0112091, 0.00421652, -0.0104901);
-//    IMU::Bias b(-29.8281, -28.4252, -26.2715,
-//                0.00603591, 0.00596286, 0.00601029);
-//    IMU::Bias b(0.007,0.007,0.007,
-//                0.00603591, 0.00596286, 0.00601029);
-    IMU::Bias b(0,0,0,0,0,0);
+    // for simulation data
+    IMU::Bias b(0.007, 0.007, 0.007,
+                0.006, 0.006, 0.006);
     Sophus::SE3<float> Tbc(Eigen::Matrix3f::Identity(), Eigen::Vector3f(0, 0, 0));
-    IMU::Calib c(Tbc, 0.04, 0.04, 0.01, 0.01);
+    IMU::Calib c(Tbc, 0.0001888339269965301, 0.000025019929573561175, 2.5565313322052523e-06, 6.972435158192731e-05);
+
+    // for simulationGT data
+//    IMU::Bias b(0, 0, 0, 0, 0, 0);
+//    Sophus::SE3<float> Tbc(Eigen::Matrix3f::Identity(), Eigen::Vector3f(0, 0, 0));
+//    IMU::Calib c(Tbc, 0.0, 0.0, 0.0, 0.0);
 
     auto *preintegrated = new IMU::Preintegrated(b, c);
 

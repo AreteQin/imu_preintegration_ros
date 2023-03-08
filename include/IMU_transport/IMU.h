@@ -164,28 +164,17 @@ namespace IMU {
         // Calculate the new delta position dP while updating the bias
         Eigen::Vector3f GetDeltaPosition(const Bias &b_);
 
-//        // usage? TODO
-//        Eigen::Matrix3f GetUpdatedDeltaRotation() {
-//            std::unique_lock<std::mutex> lock(mMutex);
-//            // equation (5.7)
-//            return NormalizeRotation(dR * Sophus::SO3f::exp(JRg * db.head(3)).matrix());
-//        }
-//
-//        Eigen::Vector3f GetUpdatedDeltaVelocity() {
-//            std::unique_lock<std::mutex> lock(mMutex);
-//            return dV + JVg * db.head(3) + JVa * db.tail(3);
-//        }
-//
-//        Eigen::Vector3f GetUpdatedDeltaPosition() {
-//            std::unique_lock<std::mutex> lock(mMutex);
-//            return dP + JPg * db.head(3) + JPa * db.tail(3);
-//        }
-//
         Eigen::Matrix3f GetOriginalDeltaRotation();
 
         Eigen::Vector3f GetOriginalDeltaVelocity();
 
         Eigen::Vector3f GetOriginalDeltaPosition();
+
+        Eigen::Matrix3f GetUpdatedDeltaRotation();
+
+        Eigen::Vector3f GetUpdatedDeltaVelocity();
+
+        Eigen::Vector3f GetUpdatedDeltaPosition();
 
 //
 //        Bias GetOriginalBias() {

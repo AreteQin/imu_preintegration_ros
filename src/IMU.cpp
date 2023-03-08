@@ -319,8 +319,8 @@ namespace IMU {
         // v/nv 表示垂直于两个向量的轴  ang 表示转的角度，组成角轴
         Eigen::Vector3f vzg = v * ang / nv;
         // 获得重力坐标系到世界坐标系的旋转矩阵的初值
-        Rwg = Sophus::SO3f::exp(vzg).matrix();
-//        Rwg = Sophus::SO3f::exp(gI).matrix();
+//        Rwg = Sophus::SO3f::exp(vzg).matrix();
+        Rwg = Sophus::SO3f::exp(gI).matrix();
 //        LOG(INFO) << "Rwg: " << std::endl << Rwg << std::endl;
         // Update dP
         dP = {0, 0, 0};
@@ -373,13 +373,6 @@ namespace IMU {
         db(5) = bu_.baz - b.baz;
     }
 
-    // Calculate the delta bias between the new one and the last one
-    IMU::Bias Preintegrated::GetDeltaBias(const Bias &b_) {
-        std::unique_lock<std::mutex> lock(mMutex);
-        return IMU::Bias(b_.bax - b.bax, b_.bay - b.bay, b_.baz - b.baz, b_.bwx - b.bwx, b_.bwy - b.bwy,
-                         b_.bwz - b.bwz);
-    }
-
     // Calculate the new delta rotation dR while updating the bias
     Eigen::Matrix3f Preintegrated::GetDeltaRotation(const Bias &b_) {
         std::unique_lock<std::mutex> lock(mMutex);
@@ -409,22 +402,24 @@ namespace IMU {
         return dP + JPg * dbg + JPa * dba;
     }
 
-//        // usage? TODO
-//        Eigen::Matrix3f GetUpdatedDeltaRotation() {
-//            std::unique_lock<std::mutex> lock(mMutex);
-//            // equation (5.7)
-//            return NormalizeRotation(dR * Sophus::SO3f::exp(JRg * db.head(3)).matrix());
-//        }
-//
-//        Eigen::Vector3f GetUpdatedDeltaVelocity() {
-//            std::unique_lock<std::mutex> lock(mMutex);
-//            return dV + JVg * db.head(3) + JVa * db.tail(3);
-//        }
-//
-//        Eigen::Vector3f GetUpdatedDeltaPosition() {
-//            std::unique_lock<std::mutex> lock(mMutex);
-//            return dP + JPg * db.head(3) + JPa * db.tail(3);
-//        }
+    // update rotation using delta bias
+    Eigen::Matrix3f Preintegrated::GetUpdatedDeltaRotation() {
+        std::unique_lock<std::mutex> lock(mMutex);
+        // equation (5.7)
+        return NormalizeRotation(dR * Sophus::SO3f::exp(JRg * db.head(3)).matrix());
+    }
+
+    // update velocity using delta bias
+    Eigen::Vector3f Preintegrated::GetUpdatedDeltaVelocity() {
+        std::unique_lock<std::mutex> lock(mMutex);
+        return dV + JVg * db.head(3) + JVa * db.tail(3);
+    }
+
+    // update position using delta bias
+    Eigen::Vector3f Preintegrated::GetUpdatedDeltaPosition() {
+        std::unique_lock<std::mutex> lock(mMutex);
+        return dP + JPg * db.head(3) + JPa * db.tail(3);
+    }
 
     Eigen::Matrix3f Preintegrated::GetOriginalDeltaRotation() {
         std::unique_lock<std::mutex> lock(mMutex);
