@@ -40,6 +40,7 @@ namespace IMU {
         return RightJacobianSO3(v(0), v(1), v(2));
     }
 
+    // 旋转向量对时间的导数的逆矩阵
     Eigen::Matrix3f InverseRightJacobianSO3(const float &x, const float &y, const float &z) {
         Eigen::Matrix3f I;
         I.setIdentity();
@@ -290,7 +291,8 @@ namespace IMU {
     bool Preintegrated::InitialiseDirectionG() {
         if (mvMeasurements.size() < min_imu_init) {
             // 初始化时关于速度的预积分累减的定义
-            accumulated_gravity = accumulated_gravity - (dR * mvMeasurements.back().a);
+//            accumulated_gravity = accumulated_gravity - (dR * mvMeasurements.back().a); // works for static case
+            accumulated_gravity = accumulated_gravity - avgV; // 累加后仅保留了第一帧和最后一帧IMU的速度，因此可以忽略
             // dR * dV = Ri*[Ri^T*(s*Vj - s*Vi - Rwg*g*tij)] = s*Vj - s*Vi - Rwg*g*tij
             // 求取实际的速度，位移/时间
             return false;
@@ -301,7 +303,7 @@ namespace IMU {
         LOG(INFO) << "dT: " << dT;
         // dirG = -(-sV1 + sVn - n*Rwg*g*t) = sV1 - sVn + n*Rwg*g*t
         // 归一化，约等于重力在世界坐标系下的方向
-        accumulated_gravity = accumulated_gravity + avgV; // TODO: why dirG = dirG + avgV?
+        accumulated_gravity = accumulated_gravity - avgV;
         LOG(INFO) << "avgV: " << avgV.transpose();
         LOG(INFO) << "avgV.norm(): " << avgV.norm();
         LOG(INFO) << "dirG.norm()/min_imu_init: " << accumulated_gravity.norm() / (min_imu_init - 1);

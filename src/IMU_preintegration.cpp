@@ -24,7 +24,7 @@ PreintegrateImuFromFirstKF(IMU::Preintegrated *current_preintegration, Eigen::Ve
     return true;
 }
 
-void imuCallback(const sensor_msgs::Imu::ConstPtr &msg, IMU::Preintegrated *preintegration) {
+void imuReceiverCallback(const sensor_msgs::Imu::ConstPtr &msg, IMU::Preintegrated *preintegration) {
 //    ROS_INFO("imu: %f, %f, %f, %f, %f, %f",
 //             msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z,
 //             msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
 
     // 此处  _1 是占位符， 表示了const std_msgs::Imu::ConstPtr& msg
     ros::Subscriber subimu = node.subscribe<sensor_msgs::Imu>("qcar_imu/raw", 10,
-                                                              boost::bind(&imuCallback, _1, preintegrated));
+                                                              boost::bind(&imuReceiverCallback, _1, preintegrated));
     geometry_msgs::TransformStamped imu_preintegrated_pose;
     ros::Publisher pub_quaternion = node.advertise<geometry_msgs::QuaternionStamped>("qcar_imu/pose/quaternion",
                                                                                      10);
